@@ -10,12 +10,13 @@ StudyMate Frontend is a React-based single-page application (SPA) built with:
 - **Vite** - Build tool and dev server
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Utility-first CSS framework
-- **shadcn/ui** - Component library with Radix UI primitives
+- **Ant Design** - Enterprise-class UI component library
 - **Zustand** - Lightweight state management
 - **React Router** - Client-side routing
 - **Axios** - HTTP client for API communication
 - **Lucide React** - Icon library
 - **Leaflet & react-leaflet** - Interactive mapping
+- **Day.js** - Date manipulation library
 
 ## Project Structure
 
@@ -23,10 +24,9 @@ StudyMate Frontend is a React-based single-page application (SPA) built with:
 study-mate-fe/
 ├── src/
 │   ├── components/
-│   │   ├── ui/              # shadcn/ui components (button, card, input, etc.)
 │   │   ├── layout/          # Layout components (Navigation, Sidebar, Layout)
-│   │   ├── Toast.tsx        # Toast notification component
-│   │   └── LeafletMap.tsx   # Interactive map for learner discovery
+│   │   ├── LeafletMap.tsx   # Interactive map for learner discovery
+│   │   └── Pagination.tsx   # Custom pagination component
 │   ├── pages/
 │   │   ├── auth/            # Authentication pages (Login, Register)
 │   │   ├── DashboardPage    # Main dashboard
@@ -66,8 +66,8 @@ study-mate-fe/
 ### User Interface
 - ✅ Responsive layout with sidebar navigation
 - ✅ Desktop and mobile navigation
-- ✅ Black-white minimalistic design
-- ✅ shadcn/ui components with Tailwind CSS
+- ✅ Modern design with Ant Design components
+- ✅ Ant Design v5 with custom theme configuration
 - ✅ Smooth transitions and animations
 
 ### Dashboard
@@ -153,27 +153,43 @@ npm run build
 ## Design System
 
 ### Color Palette
-- **Primary**: Black (#000000)
-- **Secondary**: Gray (#f5f5f5, #666666)
-- **Background**: White (#ffffff)
-- **Border**: Light Gray (#e5e5e5)
-- **Destructive**: Red (#dc2626)
+- **Primary**: Blue (#1677FF) - Ant Design default primary color
+- **Success**: Green (#52c41a)
+- **Warning**: Orange (#faad14)
+- **Error**: Red (#ff4d4f)
+- **Text**: Dark gray with multiple shades (rgba(0, 0, 0, 0.88), 0.65, 0.45, 0.25)
+- **Border**: Light Gray (#d9d9d9)
 
 ### Typography
-- **Headings**: Bold, black text
-- **Body**: Regular, dark gray text
-- **Small**: Muted gray for secondary information
+- **Font Size**: 14px base
+- **Text Colors**: Multiple shades for hierarchy (primary, secondary, tertiary, quaternary)
+- **Headings**: Bold, high contrast text
+- **Body**: Regular, readable text
+
+### Theme Configuration
+The application uses Ant Design's ConfigProvider with custom theme tokens:
+- Custom primary color (#1677FF)
+- Border radius: 8px
+- Custom component-level styling
+- Responsive design tokens
 
 ### Components
-All UI components use shadcn/ui patterns with customization for the black-white theme:
-- Button (variants: default, outline, ghost, secondary)
-- Card (with header, content, footer sections)
-- Input & Textarea (clean, focused borders)
-- Badge (for status indicators)
-- Dialog (for modals)
-- Tabs & DropdownMenu (for navigation)
-- Avatar (for user profiles)
-- Skeleton (for loading states)
+All UI components use Ant Design v5 components:
+- **Button** - Various types (primary, default, dashed, text, link)
+- **Card** - Container component with header, body, and actions
+- **Input & Textarea** - Form input components
+- **Badge** - Status indicators and notifications
+- **Modal** - Dialog and confirmation modals
+- **Tabs** - Tab navigation
+- **Select & Dropdown** - Selection and dropdown menus
+- **Avatar** - User profile images
+- **Skeleton** - Loading placeholders
+- **Spin** - Loading spinners
+- **Calendar** - Date picker and calendar views
+- **Pagination** - Page navigation
+- **Statistic** - Display statistics with animations
+- **Notification** - Toast notifications
+- **Empty** - Empty state displays
 
 ## State Management
 
@@ -194,33 +210,6 @@ Located at `src/stores/authStore.ts`
 - `fetchProfile()` - Fetch user profile
 - `updateProfile(data)` - Update user profile
 - `changePassword()` - Change user password
-
-## API Integration
-
-### API Client
-Located at `src/utils/api.ts`
-
-Features:
-- Axios instance with JWT interceptor
-- Automatic Bearer token injection
-- Token refresh mechanism on 401
-- Error handling and logging
-
-### API Endpoints Used
-- `POST /auth/login/` - Login
-- `POST /auth/register/` - Register
-- `POST /auth/logout/` - Logout
-- `GET /auth/profile/` - Get user profile
-- `PATCH /auth/profile/` - Update profile
-- `POST /auth/change-password/` - Change password
-- `GET /discover/nearby-learners/` - Find nearby learners
-- `GET /matching/requests/` - Get connection requests
-- `GET /matching/connections/` - Get accepted connections
-- `GET /chat/conversations/` - Get conversations
-- `GET /chat/conversations/{id}/messages/` - Get messages
-- `POST /chat/messages/` - Send message
-- `GET /sessions/` - List study sessions
-- `GET /groups/` - List study groups
 
 ## Responsive Design
 
@@ -250,19 +239,27 @@ The application is fully responsive with:
 - `StudySessionsPage.tsx` - Study sessions
 - `StudyGroupsPage.tsx` - Study groups
 
-### UI Components (shadcn/ui)
+### UI Components (Ant Design)
 - Button
 - Card
 - Input
 - Textarea
-- Label
-- Dialog
-- Dropdown Menu
+- Form
+- Modal
+- Dropdown
 - Tabs
 - Alert
 - Badge
 - Avatar
 - Skeleton
+- Spin
+- Calendar
+- Pagination
+- Statistic
+- Select
+- Notification
+- Popconfirm
+- Empty
 
 ## Error Handling
 
@@ -277,12 +274,11 @@ The application is fully responsive with:
 ### Priority Features to Implement
 1. **Real-time Chat** - Implement WebSocket integration for real-time messaging
 2. **Location Services** - Browser geolocation API integration
-3. **Map Integration** - Display nearby users on map
+3. **Map Integration** - Display nearby users on map (partially implemented with Leaflet)
 4. **Advanced Search** - Subject filters, availability filters
-5. **Notifications** - Toast notifications for events
-6. **Image Upload** - Avatar and media uploads
-7. **Session Creation** - Create and manage study sessions
-8. **Group Management** - Create and manage study groups
+5. **Image Upload** - Avatar and media uploads
+6. **Session Creation** - Create and manage study sessions
+7. **Group Management** - Create and manage study groups
 
 ### Code Improvements
 1. Add comprehensive error boundaries
@@ -329,9 +325,10 @@ When adding new features:
 1. Create pages in `/src/pages/`
 2. Create components in `/src/components/`
 3. Use existing Zustand stores or create new ones in `/src/stores/`
-4. Follow the black-white design system
-5. Ensure responsive design
-6. Add error handling and loading states
+4. Use Ant Design components from `antd` package
+5. Ensure responsive design with Ant Design's responsive system
+6. Add error handling and loading states using Ant Design's Spin and notification components
+7. Follow Ant Design's design guidelines and theme tokens
 
 ## License
 
