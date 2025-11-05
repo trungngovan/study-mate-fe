@@ -98,20 +98,29 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   restoreSession: async () => {
+    console.log('🔄 Starting session restoration...')
+    console.log('🌍 Current URL:', typeof window !== 'undefined' ? window.location.href : 'N/A')
     const accessToken = localStorage.getItem('access_token')
+    console.log('🔑 Token found:', !!accessToken)
+    if (accessToken) {
+      console.log('🔑 Token length:', accessToken.length)
+    }
+
     if (accessToken) {
       set({ isAuthenticated: true, isLoading: true })
       try {
+        console.log('📡 Fetching user profile...')
         const response = await api.get('/auth/profile/')
-        console.log('Profile fetch successful:', response.data)
+        console.log('✅ Profile fetch successful:', response.data)
         set({
           user: response.data,
           isAuthenticated: true, // Explicitly set again
           isLoading: false,
           error: null
         })
+        console.log('✅ Session restored successfully')
       } catch (error: any) {
-        console.error('Failed to restore session:', error)
+        console.error('❌ Failed to restore session:', error)
         // Token might be invalid, clear it
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
@@ -121,9 +130,11 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoading: false,
           error: 'Session expired. Please login again.'
         })
+        console.log('🧹 Token cleared, user logged out')
       }
     } else {
       // No token found
+      console.log('⚠️ No token found in localStorage')
       set({ isLoading: false, isAuthenticated: false })
     }
   },

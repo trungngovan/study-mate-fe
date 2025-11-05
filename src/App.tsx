@@ -23,14 +23,38 @@ import PrivateRoute from '@/components/PrivateRoute'
 
 export default function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   useEffect(() => {
     // Call async restoreSession immediately - don't await
     // PrivateRoute will show loading spinner while it runs
+    // Only run once on mount - restoreSession is stable from Zustand
     restoreSession().catch((error) => {
       console.error('Session restoration failed:', error)
     })
-  }, [restoreSession]) // Include restoreSession to satisfy eslint, but it won't cause infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty deps - only run once on mount
+
+  // Listen for storage events to sync auth state across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // If access_token was added/updated in another tab and we're not authenticated, restore session
+      if (e.key === 'access_token' && e.newValue && !isAuthenticated) {
+        console.log('Token detected in other tab, restoring session...')
+        restoreSession().catch((error) => {
+          console.error('Session restoration failed:', error)
+        })
+      }
+      // If access_token was removed in another tab and we're authenticated, logout
+      if (e.key === 'access_token' && !e.newValue && isAuthenticated) {
+        console.log('Token removed in other tab, logging out...')
+        useAuthStore.getState().logout()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [isAuthenticated, restoreSession])
 
   return (
     <ConfigProvider

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { Card, Button, Input, Select, Avatar, Tag, Typography } from 'antd'
-import { UserOutlined } from '@ant-design/icons'
+import { UserOutlined, ClockCircleOutlined, EnvironmentOutlined } from '@ant-design/icons'
 import { notification } from 'antd'
+import { Table, DatePicker, Space } from 'antd'
+import api from '@/utils/api'
+import { useGeolocation } from '@/hooks/useGeolocation'
+import type { Dayjs } from 'dayjs'
 
+const { RangePicker } = DatePicker
 const { TextArea } = Input
 const { Title, Text } = Typography
 
@@ -19,6 +24,30 @@ export default function ProfilePage() {
     learning_radius_km: user?.learning_radius_km || 5,
   })
 
+  // Location state
+  const { getCurrentLocation } = useGeolocation()
+  const [currentLocation, setCurrentLocation] = useState<{
+    latitude: number
+    longitude: number
+    last_updated: string
+  } | null>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyData, setHistoryData] = useState<{
+    count: number
+    next: string | null
+    previous: string | null
+    results: Array<{
+      id: number
+      latitude: number
+      longitude: number
+      recorded_at: string
+      accuracy?: number
+    }>
+  } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null)
+
   // Sync formData with user when user changes (only when not editing)
   useEffect(() => {
     if (!isEditing && user) {
@@ -32,6 +61,53 @@ export default function ProfilePage() {
       })
     }
   }, [user, isEditing])
+
+  // Fetch current location from server
+  const fetchCurrentLocation = async () => {
+    try {
+      const res = await api.get('/users/location/current/')
+      setCurrentLocation(res.data)
+    } catch (err) {
+      console.error('Failed to fetch current location:', err)
+    }
+  }
+
+  // Fetch history with optional filters
+  const fetchHistory = async (url?: string) => {
+    setHistoryLoading(true)
+    try {
+      if (url) {
+        const res = await api.get(url)
+        setHistoryData(res.data)
+      } else {
+        const params: Record<string, any> = { limit: pageSize, page: currentPage }
+        if (dateRange?.[0]) params.from_date = dateRange[0]?.toISOString()
+        if (dateRange?.[1]) params.to_date = dateRange[1]?.toISOString()
+        const res = await api.get('/users/location/history/', { params })
+        setHistoryData(res.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch location history:', err)
+      notification.error({
+        message: 'Error',
+        description: 'Failed to load location history',
+        placement: 'topRight',
+      })
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  // Init load
+  useEffect(() => {
+    fetchCurrentLocation()
+  }, [])
+
+  // Reload history when filters or pagination change
+  useEffect(() => {
+    fetchHistory()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, dateRange])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -79,6 +155,11 @@ export default function ProfilePage() {
     const names = name.trim().split(' ')
     if (names.length === 1) return names[0][0].toUpperCase()
     return (names[0][0] + names[names.length - 1][0]).toUpperCase()
+  }
+
+  const formatCoordinate = (value: unknown) => {
+    const num = typeof value === 'number' ? value : Number(value)
+    return Number.isFinite(num) ? num.toFixed(6) : '—'
   }
 
   return (
@@ -311,6 +392,115 @@ export default function ProfilePage() {
             )}
           </div>
         </form>
+      </Card>
+
+      {/* Location controls */}
+      <Card title="Location">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <Text type="secondary">Current Location</Text>
+              <div className="mt-1">
+                {currentLocation ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Tag icon={<EnvironmentOutlined />} color="processing">
+                      {formatCoordinate(currentLocation.latitude)}, {formatCoordinate(currentLocation.longitude)}
+                    </Tag>
+                    <Text type="secondary">
+                      <ClockCircleOutlined className="mr-1" />
+                      Updated {currentLocation.last_updated ? new Date(currentLocation.last_updated).toLocaleString() : '—'}
+                    </Text>
+                  </div>
+                ) : (
+                  <Text type="secondary">Not available</Text>
+                )}
+              </div>
+            </div>
+            <Space>
+              <Button
+                onClick={async () => {
+                  const result = await getCurrentLocation()
+                  if (result) {
+                    fetchCurrentLocation()
+                    fetchHistory()
+                  }
+                }}
+              >
+                Update Current Location
+              </Button>
+              <Button onClick={fetchCurrentLocation}>Refresh</Button>
+            </Space>
+          </div>
+        </div>
+      </Card>
+
+      {/* Location History */}
+      <Card title="Location History">
+        <div className="flex items-center justify-between mb-3">
+          <Space>
+            <RangePicker
+              allowClear
+              value={dateRange as any}
+              onChange={(val) => {
+                setCurrentPage(1)
+                setDateRange(val as any)
+              }}
+              showTime
+            />
+            <Button type="primary" onClick={() => setCurrentPage(1)} loading={historyLoading}>
+              Apply Filters
+            </Button>
+            <Button onClick={() => { setDateRange(null); setCurrentPage(1) }} disabled={historyLoading}>
+              Clear
+            </Button>
+          </Space>
+        </div>
+        <Table
+          rowKey="id"
+          loading={historyLoading}
+          dataSource={historyData?.results || []}
+          pagination={{
+            current: currentPage,
+            pageSize,
+            total: historyData?.count || 0,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50, 100],
+          }}
+          onChange={(pagination) => {
+            const nextPage = pagination.current || 1
+            const nextSize = pagination.pageSize || pageSize
+            const sizeChanged = nextSize !== pageSize
+            setPageSize(nextSize)
+            setCurrentPage(sizeChanged ? 1 : nextPage)
+          }}
+          columns={[
+            {
+              title: 'Recorded At',
+              dataIndex: 'recorded_at',
+              render: (v: string) => new Date(v).toLocaleString(),
+            },
+            {
+              title: 'Latitude',
+              dataIndex: 'latitude',
+              render: (v: number) => v?.toFixed(6),
+            },
+            {
+              title: 'Longitude',
+              dataIndex: 'longitude',
+              render: (v: number) => v?.toFixed(6),
+            },
+            {
+              title: 'Accuracy (m)',
+              dataIndex: 'accuracy',
+              render: (v?: number) => (v != null ? v : '—'),
+            },
+          ]}
+        />
+        <div className="mt-3">
+          <Text type="secondary">
+            {historyData ? `Showing ${historyData.results.length} of ${historyData.count}` : 'No data'}
+          </Text>
+        </div>
       </Card>
     </div>
   )

@@ -3,6 +3,13 @@ import { useAuthStore } from '@/stores/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
+// Log API URL on initialization (only in browser)
+if (typeof window !== 'undefined') {
+  console.log('🔗 API Base URL:', API_BASE_URL)
+  console.log('🌍 Environment:', import.meta.env.MODE)
+  console.log('📍 Current URL:', window.location.origin)
+}
+
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
